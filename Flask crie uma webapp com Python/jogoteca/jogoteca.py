@@ -25,7 +25,7 @@ class Jogos(db.Model):
         return '<Name %r>' % self.name
     
     
-class Usuario(db.Model):
+class Usuarios(db.Model):
     nickname = db.Column(db.String(8), primary_key = True)
     nome = db.Column(db.String(20), nullable = False)
     senha = db.Column(db.String(100), nullable = False)
@@ -35,6 +35,7 @@ class Usuario(db.Model):
     
 @app.route("/")
 def index():
+    lista = Jogos.query.order_by(Jogos.id)
     return render_template('lista.html', titulo = "Jogos", jogos = lista)
 
 @app.route("/novo")
@@ -48,8 +49,17 @@ def criar():
     nome = request.form['nome']
     categoria = request.form['categoria']
     console = request.form['console']
-    jogo = Jogo(nome, categoria, console)
-    lista.append(jogo)
+    
+    jogo = Jogos.query.filter_by(nome = nome).first()
+    
+    if jogo:
+        flash('Jogo já existente!')
+        return redirect(url_for('index'))
+    
+    novo_jogo = Jogos(nome = nome, categoria = categoria, console = console)
+    db.session.add(novo_jogo)
+    db.session.commit()
+    
     return redirect(url_for('index'))
 
 @app.route("/login")
@@ -59,8 +69,8 @@ def login():
 
 @app.route('/autenticar', methods = ['POST',])
 def autenticar():
-    if request.form['usuario'] in usuarios:
-        usuario = usuarios[request.form['usuario']]
+    usuario = Usuarios.query.filter_by(nickname = request.form['usuario']).first()
+    if usuario:
         if request.form['senha'] == usuario.senha:
             session['usuario_logado'] = usuario.nickname
             flash(usuario.nickname + " logado com sucesso!")
